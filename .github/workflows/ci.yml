@@ -41,7 +41,7 @@ jobs:
         run: mvn -B package --file TourGuide/pom.xml
 
       - name: Create staging directory
-        run: mkdir staging && cp target/*.jar staging
+        run: mkdir staging && cp TourGuide/target/*.jar staging
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
