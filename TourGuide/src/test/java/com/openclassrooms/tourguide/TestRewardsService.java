@@ -2,7 +2,6 @@ package com.openclassrooms.tourguide;
 
 import java.util.*;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import gpsUtil.GpsUtil;
@@ -20,20 +19,24 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TestRewardsService {
 
     @Test
-    @Disabled
     public void userGetRewards() {
         GpsUtil gpsUtil = new GpsUtil();
         RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 
+        //Given one user with one visited location close to an attraction
         InternalTestHelper.setInternalUserNumber(0);
         TourGuideService tourGuideService = new TourGuideService(gpsUtil, rewardsService);
-
         User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
         Attraction attraction = gpsUtil.getAttractions().get(0);
         user.addToVisitedLocations(new VisitedLocation(user.getUserId(), attraction, new Date()));
+
+        //When tracking user location
         tourGuideService.trackUserLocation(user);
+
+        //Then reward for the attraction should be added to the user
         List<UserReward> userRewards = user.getUserRewards();
         tourGuideService.tracker.stopTracking();
+
         assertTrue(userRewards.size() == 1);
     }
 

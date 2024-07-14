@@ -90,22 +90,10 @@ public class TourGuideService {
         return visitedLocation;
     }
 
-    /**
-    public List<Attraction> getNearByAttractions(VisitedLocation visitedLocation) {
-        List<Attraction> nearbyAttractions = new ArrayList<>();
-        for (Attraction attraction : gpsUtil.getAttractions()) {
-            if (rewardsService.isWithinAttractionProximity(attraction, visitedLocation.location)) {
-                nearbyAttractions.add(attraction);
-            }
-        }
-        return nearbyAttractions;
-    }
-     */
-
     public List<AttractionDistanceDTO> getNearByAttractions(VisitedLocation visitedLocation, User user) {
         Location userLocation = new Location(visitedLocation.location.latitude, visitedLocation.location.longitude);
 
-        //Calculate distance for each attraction and store in map
+        //Calculate distance in map
         HashMap<Attraction, Double> attractionDistance = new HashMap<>();
         gpsUtil.getAttractions().forEach(attraction -> attractionDistance.put(attraction, rewardsService.getDistance(userLocation,
                 new Location(attraction.latitude, attraction.longitude)))
@@ -144,7 +132,7 @@ public class TourGuideService {
      **********************************************************************************/
     private static final String tripPricerApiKey = "test-server-api-key";
     // Database connection will be used for external users, but for testing purposes
-    // internal users are provided and stored in memory
+// internal users are provided and stored in memory
     private final Map<String, User> internalUserMap = new HashMap<>();
 
     private void initializeInternalUsers() {
