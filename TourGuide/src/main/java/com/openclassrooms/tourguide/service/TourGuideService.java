@@ -75,11 +75,23 @@ public class TourGuideService {
     }
 
     public List<Provider> getTripDeals(User user) {
-        int cumulatativeRewardPoints = user.getUserRewards().stream().mapToInt(i -> i.getRewardPoints()).sum();
-        List<Provider> providers = tripPricer.getPrice(tripPricerApiKey, user.getUserId(),
-                user.getUserPreferences().getNumberOfAdults(), user.getUserPreferences().getNumberOfChildren(),
-                user.getUserPreferences().getTripDuration(), cumulatativeRewardPoints);
+        //Sum all user reward points
+        int cumulatativeRewardPoints = user.getUserRewards().stream()
+                .mapToInt(UserReward::getRewardPoints).sum();
+
+        //Get list of providers(trip deals) based on reward points preferences and user
+        List<Provider> providers = tripPricer.getPrice(
+                tripPricerApiKey,
+                user.getUserId(),
+                user.getUserPreferences().getNumberOfAdults(),
+                user.getUserPreferences().getNumberOfChildren(),
+                user.getUserPreferences().getTripDuration(),
+                cumulatativeRewardPoints);
+
+        //Update users trip deals
         user.setTripDeals(providers);
+
+        //Return list of providers(trip deals)
         return providers;
     }
 
