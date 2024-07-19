@@ -9,6 +9,7 @@ import com.openclassrooms.tourguide.user.UserReward;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -25,18 +26,24 @@ import rewardCentral.RewardCentral;
 import tripPricer.Provider;
 import tripPricer.TripPricer;
 
+/**
+ * Fetches user information and sets up users for testing
+ */
 @Service
 public class TourGuideService {
-    private Logger logger = LoggerFactory.getLogger(TourGuideService.class);
+    private final Logger logger = LoggerFactory.getLogger(TourGuideService.class);
     private final GpsUtil gpsUtil;
     private final RewardsService rewardsService;
     private final TripPricer tripPricer = new TripPricer();
     public final Tracker tracker;
+    private final ThreadService threadService;
     boolean testMode = true;
 
     public TourGuideService(GpsUtil gpsUtil, RewardsService rewardsService) {
         this.gpsUtil = gpsUtil;
         this.rewardsService = rewardsService;
+
+        threadService = new ThreadService();
 
         Locale.setDefault(Locale.US);
 
@@ -54,29 +61,20 @@ public class TourGuideService {
         return user.getUserRewards();
     }
 
+    /**
+     * Returns the last visited location or track current location if there's no last location
+     */
     public VisitedLocation getUserLocation(User user) {
-        VisitedLocation visitedLocation = (user.getVisitedLocations().size() > 0) ? user.getLastVisitedLocation()
-                : trackUserLocation(user);
-        return visitedLocation;
+        return (!user.getVisitedLocations().isEmpty()) ? user.getLastVisitedLocation()
+                : trackUserLocation(user).join();
     }
 
-    public User getUser(String userName) {
-        return internalUserMap.get(userName);
-    }
-
-    public List<User> getAllUsers() {
-        return internalUserMap.values().stream().collect(Collectors.toList());
-    }
-
-    public void addUser(User user) {
-        if (!internalUserMap.containsKey(user.getUserName())) {
-            internalUserMap.put(user.getUserName(), user);
-        }
-    }
-
+    /**
+     * Fetch trip deals based on users current reward points and preferences
+     */
     public List<Provider> getTripDeals(User user) {
         //Sum all user reward points
-        int cumulatativeRewardPoints = user.getUserRewards().stream()
+        int cumulativeRewardPoints = user.getUserRewards().stream()
                 .mapToInt(UserReward::getRewardPoints).sum();
 
         //Get list of providers(trip deals) based on reward points preferences and user
@@ -86,7 +84,7 @@ public class TourGuideService {
                 user.getUserPreferences().getNumberOfAdults(),
                 user.getUserPreferences().getNumberOfChildren(),
                 user.getUserPreferences().getTripDuration(),
-                cumulatativeRewardPoints);
+                cumulativeRewardPoints);
 
         //Update users trip deals
         user.setTripDeals(providers);
@@ -95,25 +93,44 @@ public class TourGuideService {
         return providers;
     }
 
-    public VisitedLocation trackUserLocation(User user) {
-        VisitedLocation visitedLocation = gpsUtil.getUserLocation(user.getUserId());
-        user.addToVisitedLocations(visitedLocation);
-        rewardsService.calculateRewards(user);
-        return visitedLocation;
+    /**
+     * Fetches the users current location using gps util
+     */
+    public CompletableFuture<VisitedLocation> trackUserLocation(User user) {
+        return CompletableFuture.supplyAsync(() ->
+                        gpsUtil.getUserLocation(user.getUserId()), threadService.getThread())
+                .thenApply(location -> {
+                    user.addToVisitedLocations(location);
+                    rewardsService.calculateRewards(user);
+                    return location;
+                })
+                .whenComplete((result, exception) -> {
+                    if (exception != null) {
+                        logger.error("Failed to fetch user location: " + exception.getMessage());
+                    }
+                    threadService.releaseThread();
+                });
     }
 
+    /**
+     * Finds the 5 closest attractions to the users current location.
+     * @param visitedLocation is the users current location
+     * @param user
+     * @return attraction name, location, distance to user, and reward points
+     */
     public List<AttractionDistanceDTO> getNearByAttractions(VisitedLocation visitedLocation, User user) {
         Location userLocation = new Location(visitedLocation.location.latitude, visitedLocation.location.longitude);
 
-        //Calculate distance in map
+        //Calculate distance for each attraction and store in map
         HashMap<Attraction, Double> attractionDistance = new HashMap<>();
-        gpsUtil.getAttractions().forEach(attraction -> attractionDistance.put(attraction, rewardsService.getDistance(userLocation,
+        gpsUtil.getAttractions().forEach(attraction ->
+                attractionDistance.put(attraction, rewardsService.getDistance(userLocation,
                 new Location(attraction.latitude, attraction.longitude)))
         );
 
-        //Sort out the 5 closest and convert to DTO
         RewardCentral central = new RewardCentral(); //For calculating reward points
 
+        //Sort out the 5 closest and convert to DTO
         return attractionDistance.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue()) //Sort by distance
                 .limit(5) //Limit to the five closest
@@ -122,7 +139,7 @@ public class TourGuideService {
                         attraction.attractionName,
                         new Location(attraction.latitude, attraction.longitude),
                         userLocation,
-                        attractionDistance.get(attraction),
+                        attractionDistance.get(attraction), //Distance stored in map
                         central.getAttractionRewardPoints(attraction.attractionId, user.getUserId())
                 ))
                 .toList();
@@ -135,6 +152,24 @@ public class TourGuideService {
                 tracker.stopTracking();
             }
         });
+    }
+
+
+    /**
+     * For testing
+     */
+    public User getUser(String userName) {
+        return internalUserMap.get(userName);
+    }
+
+    public List<User> getAllUsers() {
+        return internalUserMap.values().stream().collect(Collectors.toList());
+    }
+
+    public void addUser(User user) {
+        if (!internalUserMap.containsKey(user.getUserName())) {
+            internalUserMap.put(user.getUserName(), user);
+        }
     }
 
     /**********************************************************************************

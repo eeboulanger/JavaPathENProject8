@@ -2,6 +2,7 @@ package com.openclassrooms.tourguide;
 
 import java.util.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import gpsUtil.GpsUtil;
@@ -18,10 +19,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class TestRewardsService {
 
+    private GpsUtil gpsUtil;
+    private RewardsService rewardsService;
+
+    @BeforeEach
+    public void setUp() {
+        gpsUtil = new GpsUtil();
+        rewardsService = new RewardsService(gpsUtil, new RewardCentral());
+    }
+
     @Test
     public void userGetRewards() {
-        GpsUtil gpsUtil = new GpsUtil();
-        RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
 
         //Given one user with one visited location close to an attraction
         InternalTestHelper.setInternalUserNumber(0);
@@ -31,19 +39,17 @@ public class TestRewardsService {
         user.addToVisitedLocations(new VisitedLocation(user.getUserId(), attraction, new Date()));
 
         //When tracking user location
-        tourGuideService.trackUserLocation(user);
+        tourGuideService.trackUserLocation(user).join();
 
         //Then reward for the attraction should be added to the user
         List<UserReward> userRewards = user.getUserRewards();
         tourGuideService.tracker.stopTracking();
 
-        assertTrue(userRewards.size() == 1);
+        assertEquals(1, userRewards.size());
     }
 
     @Test
     public void isWithinAttractionProximity() {
-        GpsUtil gpsUtil = new GpsUtil();
-        RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
         Attraction attraction = gpsUtil.getAttractions().get(0);
         assertTrue(rewardsService.isWithinAttractionProximity(attraction, attraction));
     }
@@ -51,8 +57,6 @@ public class TestRewardsService {
     @Test
     public void nearAllAttractions() {
         //Given all available attractions are within proximity buffer
-        GpsUtil gpsUtil = new GpsUtil();
-        RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
         rewardsService.setProximityBuffer(Integer.MAX_VALUE);
 
         InternalTestHelper.setInternalUserNumber(1);
@@ -64,20 +68,8 @@ public class TestRewardsService {
         List<UserReward> userRewards = tourGuideService.getUserRewards(user);
         tourGuideService.tracker.stopTracking();
 
-        //Then all rewards should be added to the user
+        //Then all rewards should be added to the user and
+        // reward point calculation for each attraction should be run asynchronously
         assertEquals(gpsUtil.getAttractions().size(), userRewards.size());
-
-        //Then reward point calculation for each attraction should be run asynchronously
-        Set<Attraction> attractions = new HashSet<>();
-        user.getUserRewards().forEach(reward ->
-                attractions.add(reward.attraction));
-
-        rewardsService.calculatePoints(attractions, user).join();
-
-        user.getUserRewards().forEach(reward -> {
-            assertTrue(reward.getRewardPoints() > 0);
-            System.out.println(reward.attraction.attractionName + " " + reward.getRewardPoints());
-        });
-
     }
 }

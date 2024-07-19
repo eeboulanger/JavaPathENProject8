@@ -3,15 +3,10 @@ package com.openclassrooms.tourguide;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import com.openclassrooms.tourguide.model.AttractionDistanceDTO;
-import com.openclassrooms.tourguide.user.UserReward;
-import gpsUtil.location.Attraction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,11 +37,11 @@ public class TestTourGuideService {
         User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
 
         //When tracking user location
-        VisitedLocation visitedLocation = tourGuideService.trackUserLocation(user);
+        VisitedLocation visitedLocation = tourGuideService.trackUserLocation(user).join();
         tourGuideService.tracker.stopTracking();
 
         //Then visited location should be added to user
-        assertTrue(visitedLocation.userId.equals(user.getUserId()));
+        assertEquals(visitedLocation.userId, user.getUserId());
     }
 
     @Test
@@ -88,7 +83,7 @@ public class TestTourGuideService {
         User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
 
         //When tracking user location
-        VisitedLocation visitedLocation = tourGuideService.trackUserLocation(user);
+        VisitedLocation visitedLocation = tourGuideService.trackUserLocation(user).join();
         tourGuideService.tracker.stopTracking();
 
         //Then user id should be added to the visited location
@@ -100,7 +95,7 @@ public class TestTourGuideService {
     public void getNearbyAttractions() {
         //Given one user
         User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
-        VisitedLocation visitedLocation = tourGuideService.trackUserLocation(user);
+        VisitedLocation visitedLocation = tourGuideService.trackUserLocation(user).join();
 
         //When fetching the closest attractions
         List<AttractionDistanceDTO> attractions = tourGuideService
