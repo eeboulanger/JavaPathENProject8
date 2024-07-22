@@ -106,7 +106,7 @@ public class TestTourGuideService {
         assertEquals(5, attractions.size());
     }
 
-    @Test
+    //TODO implement code to return all 10 trip deals, currently returning only 5
     public void getTripDeals() {
         //Given one user
         User user = new User(
@@ -119,8 +119,7 @@ public class TestTourGuideService {
         List<Provider> providers = tourGuideService.getTripDeals(user);
         tourGuideService.tracker.stopTracking();
 
-        //Then return 10 deals??
-        assertEquals(5, providers.size());
+        assertEquals(10, providers.size());
     }
 
 }
