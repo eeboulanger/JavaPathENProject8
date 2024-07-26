@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 import com.openclassrooms.tourguide.service.*;
 import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import gpsUtil.GpsUtil;
@@ -21,7 +20,6 @@ import com.openclassrooms.tourguide.model.User;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@Disabled
 public class TestPerformance {
 
     /*
