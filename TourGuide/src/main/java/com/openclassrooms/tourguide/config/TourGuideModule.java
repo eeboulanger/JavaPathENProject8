@@ -1,5 +1,7 @@
-package com.openclassrooms.tourguide;
+package com.openclassrooms.tourguide.config;
 
+import com.openclassrooms.tourguide.service.GpsUtilService;
+import com.openclassrooms.tourguide.service.RewardCentralService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,7 +19,7 @@ public class TourGuideModule {
 	
 	@Bean
 	public RewardsService getRewardsService() {
-		return new RewardsService(getGpsUtil(), getRewardCentral());
+		return new RewardsService(new GpsUtilService(getGpsUtil()), new RewardCentralService(getRewardCentral()));
 	}
 	
 	@Bean
