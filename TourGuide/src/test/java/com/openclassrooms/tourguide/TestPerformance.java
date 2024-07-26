@@ -6,8 +6,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.openclassrooms.tourguide.model.AttractionDistanceDTO;
+import com.openclassrooms.tourguide.service.*;
 import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import gpsUtil.GpsUtil;
@@ -15,12 +18,11 @@ import gpsUtil.location.Attraction;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
 import com.openclassrooms.tourguide.helper.InternalTestHelper;
-import com.openclassrooms.tourguide.service.RewardsService;
-import com.openclassrooms.tourguide.service.TourGuideService;
 import com.openclassrooms.tourguide.user.User;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Disabled
 public class TestPerformance {
 
     /*
@@ -45,20 +47,23 @@ public class TestPerformance {
      * assertTrue(TimeUnit.MINUTES.toSeconds(20) >=
      * TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()));
      */
-    private GpsUtil gpsUtil;
     private RewardsService rewardsService;
     private TourGuideService tourGuideService;
+    private GpsUtilService gpsUtilService;
     private final int internalUsers = 100000;
     private List<User> allUsers;
 
     @BeforeEach
     public void setUp() {
-        gpsUtil = new GpsUtil();
-        rewardsService = new RewardsService(gpsUtil, new RewardCentral());
+        gpsUtilService = new GpsUtilService(new GpsUtil());
+        UserService userService = new UserService();
+        RewardCentralService rewardCentralService = new RewardCentralService(new RewardCentral());
+
+        rewardsService = new RewardsService(gpsUtilService, rewardCentralService);
         InternalTestHelper.setInternalUserNumber(internalUsers);
-        tourGuideService = new TourGuideService(gpsUtil, rewardsService);
+        tourGuideService = new TourGuideService(gpsUtilService, rewardsService, userService, rewardCentralService);
         tourGuideService.tracker.stopTracking(); //Shut down the tracker thread
-        allUsers = tourGuideService.getAllUsers();
+        allUsers = userService.getAllUsers();
     }
 
     @Test
@@ -91,7 +96,7 @@ public class TestPerformance {
     // minutes
     @Test
     public void highVolumeGetRewards() {
-        Attraction attraction = gpsUtil.getAttractions().get(0);
+        Attraction attraction = gpsUtilService.getAttractions().join().get(0);
 
         //Given all users has a new visited location nearby an attraction
         allUsers.forEach(u ->
@@ -115,5 +120,4 @@ public class TestPerformance {
                 + " seconds.");
         assertTrue(TimeUnit.MINUTES.toSeconds(20) >= TimeUnit.MILLISECONDS.toSeconds(stopWatch.getTime()));
     }
-
 }

@@ -9,16 +9,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import gpsUtil.GpsUtil;
 import gpsUtil.location.Attraction;
 import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
-import rewardCentral.RewardCentral;
 import com.openclassrooms.tourguide.user.User;
 import com.openclassrooms.tourguide.user.UserReward;
 
 /**
- * Calculating and adding user rewards
+ * Calculates and adds user rewards to a user
  */
 @Service
 public class RewardsService {
@@ -29,13 +27,14 @@ public class RewardsService {
     private int defaultProximityBuffer = 10;
     private int proximityBuffer = defaultProximityBuffer;
     private int attractionProximityRange = 200;
-    private final RewardCentral rewardsCentral;
+    private final RewardCentralService rewardCentralService;
+    private final GpsUtilService gpsUtilService;
     private final List<Attraction> attractions;
-    private final ThreadService threadService = new ThreadService();
 
-    public RewardsService(GpsUtil gpsUtil, RewardCentral rewardCentral) {
-        this.rewardsCentral = rewardCentral;
-        attractions = gpsUtil.getAttractions();
+    public RewardsService(GpsUtilService gpsUtilService, RewardCentralService rewardCentralService) {
+        this.gpsUtilService = gpsUtilService;
+        this.rewardCentralService = rewardCentralService;
+        attractions = gpsUtilService.getAttractions().join(); //Fetch the list of attractions
     }
 
     /**
@@ -66,59 +65,58 @@ public class RewardsService {
 
     /**
      * Takes a list of attractions and updates the reward points on each attraction for the given user
-     *
      * @param getPointsList is the list of attractions for which to calculate reward points
      * @param user          whose user rewards will be updated
      */
     public void calculateRewardPoints(Set<Attraction> getPointsList, User user) {
-        CompletableFuture.runAsync(() -> getPointsList.forEach(attraction ->
-                        user.getUserRewards().stream()
-                                .filter(reward ->
-                                        reward.attraction.attractionName.equals(attraction.attractionName))//Find the user reward to update by attraction name
-                                .findFirst()
-                                .ifPresent(reward -> reward.setRewardPoints(getRewardPoints(attraction, user))) //Calculate points for the user reward
-                ), threadService.getThread())
-                .whenComplete((result, exception) -> {
-                    threadService.releaseThread();
-                    if (exception != null) {
-                        logger.error("Failed to calculate reward points: " + exception.getMessage());
-                    }
-                });
+        CompletableFuture.runAsync(() -> {
+                    getPointsList.forEach(attraction ->
+                            user.getUserRewards().stream()
+                                    .filter(reward ->
+                                            reward.attraction.attractionName.equals(attraction.attractionName))//Find the user reward to update by attraction name
+                                    .findFirst()
+                                    .ifPresent(reward ->
+                                            reward.setRewardPoints(getRewardPoints(attraction, user).join()))); //Calculate points for the user reward
+                }
+        );
     }
 
-    private int getRewardPoints(Attraction attraction, User user) {
-        return rewardsCentral.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
-    }
+/**
+ * Fetches the reward points for an attraction
+ */
+private CompletableFuture<Integer> getRewardPoints(Attraction attraction, User user) {
+    return rewardCentralService.getAttractionRewardPoints(attraction.attractionId, user.getUserId());
+}
 
-    public void setProximityBuffer(int proximityBuffer) {
-        this.proximityBuffer = proximityBuffer;
-    }
+public void setProximityBuffer(int proximityBuffer) {
+    this.proximityBuffer = proximityBuffer;
+}
 
-    public void setDefaultProximityBuffer() {
-        proximityBuffer = defaultProximityBuffer;
-    }
+public void setDefaultProximityBuffer() {
+    proximityBuffer = defaultProximityBuffer;
+}
 
 
-    public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
-        return getDistance(attraction, location) > attractionProximityRange ? false : true;
-    }
+public boolean isWithinAttractionProximity(Attraction attraction, Location location) {
+    return getDistance(attraction, location) > attractionProximityRange ? false : true;
+}
 
-    //Remove? The method is doing the same thing as the one above ^
-    private boolean nearAttraction(VisitedLocation visitedLocation, Attraction attraction) {
-        return getDistance(attraction, visitedLocation.location) > proximityBuffer ? false : true;
-    }
+//Remove? The method is doing the same thing as the one above ^
+private boolean nearAttraction(VisitedLocation visitedLocation, Attraction attraction) {
+    return getDistance(attraction, visitedLocation.location) > proximityBuffer ? false : true;
+}
 
-    public double getDistance(Location loc1, Location loc2) {
-        double lat1 = Math.toRadians(loc1.latitude);
-        double lon1 = Math.toRadians(loc1.longitude);
-        double lat2 = Math.toRadians(loc2.latitude);
-        double lon2 = Math.toRadians(loc2.longitude);
+public double getDistance(Location loc1, Location loc2) {
+    double lat1 = Math.toRadians(loc1.latitude);
+    double lon1 = Math.toRadians(loc1.longitude);
+    double lat2 = Math.toRadians(loc2.latitude);
+    double lon2 = Math.toRadians(loc2.longitude);
 
-        double angle = Math.acos(Math.sin(lat1) * Math.sin(lat2)
-                + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2));
+    double angle = Math.acos(Math.sin(lat1) * Math.sin(lat2)
+            + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2));
 
-        double nauticalMiles = 60 * Math.toDegrees(angle);
-        double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;
-        return statuteMiles;
-    }
+    double nauticalMiles = 60 * Math.toDegrees(angle);
+    double statuteMiles = STATUTE_MILES_PER_NAUTICAL_MILE * nauticalMiles;
+    return statuteMiles;
+}
 }

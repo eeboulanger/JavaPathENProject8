@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.openclassrooms.tourguide.model.AttractionDistanceDTO;
+import com.openclassrooms.tourguide.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,21 +15,23 @@ import gpsUtil.GpsUtil;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
 import com.openclassrooms.tourguide.helper.InternalTestHelper;
-import com.openclassrooms.tourguide.service.RewardsService;
-import com.openclassrooms.tourguide.service.TourGuideService;
 import com.openclassrooms.tourguide.user.User;
 import tripPricer.Provider;
 
 public class TestTourGuideService {
 
     private TourGuideService tourGuideService;
+    private UserService userService;
 
     @BeforeEach
     public void setUp() {
-        GpsUtil gpsUtil = new GpsUtil();
-        RewardsService rewardsService = new RewardsService(gpsUtil, new RewardCentral());
+        userService = new UserService();
+        GpsUtilService gpsUtilService = new GpsUtilService(new GpsUtil());
+        RewardCentralService rewardCentralService = new RewardCentralService(new RewardCentral());
+
+        RewardsService rewardsService = new RewardsService(gpsUtilService, rewardCentralService);
         InternalTestHelper.setInternalUserNumber(0);
-        tourGuideService = new TourGuideService(gpsUtil, rewardsService);
+        tourGuideService = new TourGuideService(gpsUtilService, rewardsService, userService, rewardCentralService);
     }
 
     @Test
@@ -49,11 +52,11 @@ public class TestTourGuideService {
         User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
         User user2 = new User(UUID.randomUUID(), "jon2", "000", "jon2@tourGuide.com");
 
-        tourGuideService.addUser(user);
-        tourGuideService.addUser(user2);
+        userService.addUser(user);
+        userService.addUser(user2);
 
-        User retrivedUser = tourGuideService.getUser(user.getUserName());
-        User retrivedUser2 = tourGuideService.getUser(user2.getUserName());
+        User retrivedUser = userService.getUser(user.getUserName());
+        User retrivedUser2 = userService.getUser(user2.getUserName());
 
         tourGuideService.tracker.stopTracking();
 
@@ -66,10 +69,10 @@ public class TestTourGuideService {
         User user = new User(UUID.randomUUID(), "jon", "000", "jon@tourGuide.com");
         User user2 = new User(UUID.randomUUID(), "jon2", "000", "jon2@tourGuide.com");
 
-        tourGuideService.addUser(user);
-        tourGuideService.addUser(user2);
+        userService.addUser(user);
+        userService.addUser(user2);
 
-        List<User> allUsers = tourGuideService.getAllUsers();
+        List<User> allUsers = userService.getAllUsers();
 
         tourGuideService.tracker.stopTracking();
 
@@ -99,7 +102,7 @@ public class TestTourGuideService {
 
         //When fetching the closest attractions
         List<AttractionDistanceDTO> attractions = tourGuideService
-                .getNearByAttractions(visitedLocation, user);
+                .getNearByAttractions(visitedLocation, user).join();
         tourGuideService.tracker.stopTracking();
 
         //Then five attractions should be returned

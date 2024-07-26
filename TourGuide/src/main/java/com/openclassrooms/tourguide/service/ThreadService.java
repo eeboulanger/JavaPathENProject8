@@ -25,6 +25,7 @@ public class ThreadService {
 
     /**
      * Acquires a semaphore and returns executor service
+     *
      * @return the ExecutorService instance if the semaphore is successfully acquired
      * @throws RuntimeException if acquiring the semaphore is interrupted
      */
