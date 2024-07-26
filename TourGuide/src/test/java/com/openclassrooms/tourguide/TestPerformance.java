@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.openclassrooms.tourguide.service.*;
@@ -92,7 +93,7 @@ public class TestPerformance {
     // Users should be incremented up to 100,000, and test finishes within 20
     // minutes
     @Test
-    public void highVolumeGetRewards() {
+    public void highVolumeGetRewards() throws InterruptedException {
         Attraction attraction = gpsUtilService.getAttractions().join().get(0);
 
         //Given all users has a new visited location nearby an attraction
@@ -102,8 +103,13 @@ public class TestPerformance {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
 
+        //Add Countdown latch to measure time for async threads
+        CountDownLatch latch = new CountDownLatch(allUsers.size());
+
         //When calculating the user rewards
-        allUsers.forEach(rewardsService::calculateRewards);
+        allUsers.forEach(user -> rewardsService.calculateRewards(user, latch));
+
+        latch.await();
 
         //Then the attraction should be added to the user reward
         for (User user : allUsers) {

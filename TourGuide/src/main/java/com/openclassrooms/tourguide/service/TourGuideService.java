@@ -73,7 +73,7 @@ public class TourGuideService {
         return gpsUtilService.getUserLocation(user.getUserId())
                 .thenApply(location -> {
                     user.addToVisitedLocations(location);
-                    rewardsService.calculateRewards(user);
+                    rewardsService.calculateRewards(user, null);
                     return location;
                 });
     }

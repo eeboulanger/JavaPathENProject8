@@ -70,7 +70,7 @@ public class TestRewardsService {
         User user = userService.getAllUsers().get(0);
 
         //When calculating user rewards
-        rewardsService.calculateRewards(user);
+        rewardsService.calculateRewards(user, null);
         List<UserReward> userRewards = tourGuideService.getUserRewards(user);
         tourGuideService.tracker.stopTracking();
 
