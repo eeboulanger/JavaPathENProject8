@@ -1,7 +1,7 @@
 package com.openclassrooms.tourguide.service;
 
 import com.openclassrooms.tourguide.helper.InternalTestHelper;
-import com.openclassrooms.tourguide.user.User;
+import com.openclassrooms.tourguide.model.User;
 import gpsUtil.location.Location;
 import gpsUtil.location.VisitedLocation;
 import org.slf4j.Logger;

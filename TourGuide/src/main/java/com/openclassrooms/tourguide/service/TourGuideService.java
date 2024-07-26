@@ -2,12 +2,11 @@ package com.openclassrooms.tourguide.service;
 
 import com.openclassrooms.tourguide.model.AttractionDistanceDTO;
 import com.openclassrooms.tourguide.tracker.Tracker;
-import com.openclassrooms.tourguide.user.User;
-import com.openclassrooms.tourguide.user.UserReward;
+import com.openclassrooms.tourguide.model.User;
+import com.openclassrooms.tourguide.model.UserReward;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

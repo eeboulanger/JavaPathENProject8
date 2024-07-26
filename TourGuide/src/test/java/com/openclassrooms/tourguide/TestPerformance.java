@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.openclassrooms.tourguide.model.AttractionDistanceDTO;
 import com.openclassrooms.tourguide.service.*;
 import org.apache.commons.lang3.time.StopWatch;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +17,7 @@ import gpsUtil.location.Attraction;
 import gpsUtil.location.VisitedLocation;
 import rewardCentral.RewardCentral;
 import com.openclassrooms.tourguide.helper.InternalTestHelper;
-import com.openclassrooms.tourguide.user.User;
+import com.openclassrooms.tourguide.model.User;
 
 import static org.junit.jupiter.api.Assertions.*;
 
